@@ -26,3 +26,6 @@ Thumbs.db
 builds/
 export/
 
+# Development/planning files
+IDEAS.md
+
