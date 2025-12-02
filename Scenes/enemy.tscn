@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://dxuehkd0awfp7"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_7xaro"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_7k104"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4gyqm"]
+albedo_color = Color(0.7411765, 0, 0.1764706, 1)
+
+[node name="Enemy" type="Node3D"]
+
+[node name="CharacterBody3D" type="CharacterBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
+shape = SubResource("SphereShape3D_7xaro")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CharacterBody3D/CollisionShape3D"]
+mesh = SubResource("SphereMesh_7k104")
+surface_material_override/0 = SubResource("StandardMaterial3D_4gyqm")
