@@ -1,6 +1,6 @@
 # This script is used to determine the frequency of the enemy's audio anomoly.
 extends CharacterBody3D
-class_name Enemy
+class_name BaseEnemy
 
 var frequency_hz: float = 0.0
 var rng := RandomNumberGenerator.new()
@@ -15,4 +15,3 @@ func roll_frequency() -> void:
     var hi := 20000.0
     var t := rng.randf() # 0..1
     frequency_hz = lo * pow(hi / lo, t)
-

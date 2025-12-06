@@ -1,6 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://cp76b0p4bm5k8"]
+[gd_scene load_steps=5 format=3 uid="uid://dxuehkd0awfp7"]
 
-[ext_resource type="Script" path="res://scripts/enemy/enemy_frequency_script.gd" id="1_abcd"]
+[ext_resource type="Script" path="res://scripts/actors/enemies/base_enemy.gd" id="1_abcd"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_7xaro"]
 
@@ -10,7 +10,7 @@
 albedo_color = Color(0.7411765, 0, 0.1764706, 1)
 
 [node name="Enemy" type="CharacterBody3D"]
-script = ExtResource("1_abcd")
+script = ExtResource("1_abcd")  
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("SphereShape3D_7xaro")
