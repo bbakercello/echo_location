@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://dbmhc4utgu8qj"]
+[gd_scene load_steps=6 format=3 uid="uid://dbmhc4utgu8qj"]
 
 [ext_resource type="Script" uid="uid://4otfsgn6ujnp" path="res://scripts/actors/player/player_movement_script.gd" id="1_v0iea"]
+[ext_resource type="Script" uid="uid://c2372rqr4fdpi" path="res://scripts/actors/player/ray_cast_3d.gd" id="2_ru62r"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_v0iea"]
 
@@ -12,6 +13,10 @@ albedo_color = Color(0.09019608, 0.69411767, 1, 1)
 [node name="CharacterBody3D" type="CharacterBody3D"]
 script = ExtResource("1_v0iea")
 
+[node name="PlayerRaycast" type="Node3D" parent="."]
+script = ExtResource("2_ru62r")
+camera_path = NodePath("../SpringArm3D")
+
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("CapsuleShape3D_v0iea")
 
@@ -20,5 +25,9 @@ mesh = SubResource("CapsuleMesh_f60y1")
 skeleton = NodePath("../..")
 surface_material_override/0 = SubResource("StandardMaterial3D_v0iea")
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 25, 0)
+[node name="SpringArm3D" type="SpringArm3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.81915206, 0.57357645, 0, -0.57357645, 0.81915206, 0, 4.5, 8)
+
+[node name="Camera3D" type="Camera3D" parent="SpringArm3D"]
+v_offset = 1.0
+fov = 70.0

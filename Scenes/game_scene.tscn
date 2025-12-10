@@ -1,18 +1,20 @@
 [gd_scene load_steps=4 format=3 uid="uid://cpo7b171ygn86"]
 
-[ext_resource type="PackedScene" uid="uid://cnqa70gfpwi1n" path="res://scenes/grey_box.tscn" id="1_x87qo"]
-[ext_resource type="PackedScene" uid="uid://blmfjv8bs3bh7" path="res://scenes/player.tscn" id="2_b6fju"]
-[ext_resource type="PackedScene" uid="uid://cp76b0p4bm5k8" path="res://scenes/enemy.tscn" id="3_6h5vk"]
+[ext_resource type="PackedScene" uid="uid://uo40rl6f3qm4" path="res://scenes/props/grey_box.tscn" id="1_ycayy"]
+[ext_resource type="PackedScene" uid="uid://dbmhc4utgu8qj" path="res://scenes/actors/player.tscn" id="2_ycayy"]
+[ext_resource type="PackedScene" uid="uid://cp76b0p4bm5k8" path="res://scenes/base_enemy.tscn" id="3_6h5vk"]
 
 [node name="Game Scene" type="Node3D"]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-4.371139e-08, -0.9063078, 0.42261818, 0, 0.42261818, 0.9063078, -1, 3.9615973e-08, -1.8473227e-08, 0, 25.862, 0)
+transform = Transform3D(0.45399052, -0.8075262, 0.37655562, 0, 0.42261824, 0.9063078, -0.8910065, -0.41145515, 0.19186467, 0, 11.492, 0)
 shadow_enabled = true
+shadow_opacity = 0.8
+shadow_blur = 2.027
 
-[node name="Grey Box" parent="." instance=ExtResource("1_x87qo")]
+[node name="Grey Box" parent="." instance=ExtResource("1_ycayy")]
 
-[node name="Player" parent="." instance=ExtResource("2_b6fju")]
+[node name="Player" parent="." instance=ExtResource("2_ycayy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
 [node name="Enemy" parent="." instance=ExtResource("3_6h5vk")]

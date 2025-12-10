@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://cp76b0p4bm5k8"]
 
-[ext_resource type="Script" path="res://scripts/enemy/base_enemy.gd" id="1_abcd"]
+[ext_resource type="Script" uid="uid://btthw1l2kfp5c" path="res://scripts/actors/enemies/base_enemy.gd" id="1_abcd"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_7xaro"]
 
