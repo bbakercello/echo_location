@@ -1,0 +1,56 @@
+---
+alwaysApply: true
+---
+
+# Constants and Configuration
+
+## Magic Numbers
+- **NEVER** use magic numbers in code - always use named constants
+- Define constants at the top of the file, grouped by purpose
+- Use descriptive names that explain what the value represents
+- Use appropriate types: `const SPEED: float = 10.0` not `const SPEED = 10`
+
+## Constant Organization
+- Group related constants together with comments
+- Use `UPPER_SNAKE_CASE` for all constants
+- Calculate derived constants from base constants when possible
+- Document what constants represent and their units
+
+## Configuration Values
+- Make gameplay values easily configurable via constants
+- Use meaningful default values
+- Consider using `@export` for values that designers might tweak
+- Keep related configuration values together
+
+## Examples of Good Constants
+```gdscript
+# Movement
+const ACCEL := 10.0
+const DECEL := 18.0
+const MAX_SPEED := 20.0
+const JUMP_VELOCITY := 7.5
+
+# Raycasting
+const RAY_LENGTH := 60.0
+const RAY_HEIGHT := 1.0
+const CLOSE_RANGE_DISTANCE := 2.0
+const FACE_DOT_THRESHOLD := 0.7  # ~45 degree cone
+
+# Collision Layers
+const LAYER_PLAYER := 1
+const LAYER_ENEMY := 2
+const LAYER_ENVIRONMENT := 4
+```
+
+## Bad Examples (Magic Numbers)
+```gdscript
+# BAD - Magic numbers
+if distance < 2.0:
+    detect_enemy()
+velocity = lerp(velocity, target, 10.0 * delta)
+
+# GOOD - Named constants
+if distance < CLOSE_RANGE_DISTANCE:
+    detect_enemy()
+velocity = lerp(velocity, target, ACCEL * delta)
+```

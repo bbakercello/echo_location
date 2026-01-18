@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+---
+
+# Godot Best Practices - Overview
+
+This file serves as an index. See the following files for specific best practices:
+
+- `gdscript_coding_standards.mdc` - Type safety, naming, code organization
+- `physics_and_collision.mdc` - Raycasting, collision layers, CharacterBody3D
+- `node_and_scene_organization.mdc` - Scene structure, node references, groups
+- `constants_and_configuration.mdc` - Avoiding magic numbers, constant organization
+- `function_design.mdc` - Function length, parameters, early returns
+- `debugging_and_logging.mdc` - Logging strategy, debug flags
+
+## General Principles
+
+1. **Type Everything** - Explicit types catch errors early and improve IDE support
+2. **No Magic Numbers** - All values should be named constants
+3. **Single Responsibility** - Each function/class should do one thing well
+4. **Early Returns** - Reduce nesting and improve readability
+5. **Clear Naming** - Code should be self-documenting through good names
+6. **Performance Aware** - Cache references, avoid per-frame allocations
+7. **Error Handling** - Always check for null, validate inputs
+
+## Quick Reference
+
+### Must-Do
+- ✅ Type all variables and function signatures
+- ✅ Use constants for all magic numbers
+- ✅ Check for null before using node references
+- ✅ Exclude self from raycasts: `query.exclude = [get_rid()]`
+- ✅ Use groups for logical categorization
+- ✅ Keep functions under 50 lines
+
+### Must-Not-Do
+- ❌ Use magic numbers in code
+- ❌ Assume nodes exist without checking
+- ❌ Use untyped variables
+- ❌ Create functions over 100 lines
+- ❌ Log in tight loops
+- ❌ Hard-code collision layer numbers

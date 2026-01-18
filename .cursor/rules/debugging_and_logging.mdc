@@ -1,0 +1,56 @@
+---
+alwaysApply: true
+---
+
+# Debugging and Logging Best Practices
+
+## Logging Strategy
+- Use `print()` for important state changes (enemy detected, player died, etc.)
+- Use `print_debug()` for detailed debugging information
+- Keep production logging minimal - only log meaningful events
+- Use a debug flag to control verbose logging: `var debug_enabled := false`
+
+## What to Log
+- **DO log**: State transitions, errors, important game events
+- **DON'T log**: Every frame updates, trivial calculations, obvious operations
+- Log with context: Include relevant values (distance, position, etc.)
+- Format log messages clearly: `"NOW FACING ENEMY: [path] (distance: X.X)"`
+
+## Debug Flags
+- Use boolean flags to control debug output: `var debug_raycast := false`
+- Set flags at the top of scripts for easy toggling
+- Don't leave debug code in production - remove or disable it
+- Use conditional compilation if needed: `if OS.is_debug_build():`
+
+## Error Messages
+- Make error messages descriptive and actionable
+- Include relevant context (what failed, why it might have failed)
+- Use `push_error()` for actual errors, not just debug info
+- Don't spam the console with repeated errors
+
+## Performance Considerations
+- Don't log in tight loops (every frame)
+- Use frame counters for periodic logging: `if Engine.get_process_frames() % 60 == 0:`
+- Remove or disable debug logging in release builds
+- Consider using a logging system for production games
+
+## Example: Good Logging
+```gdscript
+var debug_raycast := false  # Set to false in production
+
+func _check_facing_enemy() -> void:
+    # ... raycast logic ...
+    
+    if hit_node.is_in_group("enemies"):
+        var distance: float = hit.get("position", Vector3.ZERO).distance_to(origin)
+        _set_facing(true, hit_node, distance)  # Logs only on state change
+
+func _set_facing(is_facing: bool, enemy_node: Node = null, distance: float = 0.0) -> void:
+    if is_facing and not was_facing_enemy:
+        if enemy_node != null:
+            print("NOW FACING ENEMY: ", enemy_node.get_path(), " (distance: ", "%.1f" % distance, ")")
+        else:
+            print("NOW FACING ENEMY")
+    elif not is_facing and was_facing_enemy:
+        print("NO LONGER FACING ENEMY")
+```

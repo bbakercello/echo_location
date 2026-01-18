@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+---
+
+# Node and Scene Organization
+
+## Scene Structure
+- Keep scenes focused on a single responsibility
+- Use consistent naming: `actor_name.tscn`, `prop_name.tscn`
+- Organize scenes in folders by type: `scenes/actors/`, `scenes/props/`, `scenes/ui/`
+- Keep scene hierarchies shallow when possible (avoid deep nesting)
+
+## Node References
+- Use `@onready` for node references that are children of the current node
+- Use `get_node_or_null()` when node might not exist
+- Cache frequently accessed nodes in variables
+- Prefer `$NodePath` syntax for direct children, full paths for deeper nodes
+- Never assume a node exists - always check for null
+
+## Groups
+- Use groups for logical categorization, not for finding specific nodes
+- Use consistent group names: `"enemies"`, `"players"`, `"interactables"`
+- Add nodes to groups in `_ready()` or in the scene editor
+- Document group purposes in comments
+
+## Signals
+- Use signals for decoupled communication between nodes
+- Name signals clearly: `enemy_died`, `player_health_changed`
+- Connect signals in `_ready()` or through the editor
+- Use `call_deferred()` if connecting signals during tree modification
+
+## Script Organization
+- One script per node type (don't reuse scripts across unrelated nodes)
+- Keep scripts in `scripts/` folder, organized by type
+- Use class_name for reusable classes: `class_name BaseEnemy extends CharacterBody3D`
+- Inherit from base classes when appropriate
+
+## Resource Management
+- Use `@export` for properties that should be editable in the editor
+- Use `@export_group()` to organize exported properties
+- Preload resources at the top of scripts when possible
+- Use `load()` for resources that might not always be needed
