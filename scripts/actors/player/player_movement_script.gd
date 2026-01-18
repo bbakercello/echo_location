@@ -13,6 +13,7 @@ var enemy_detector: EnemyDetector
 
 func _ready() -> void:
 	# Initialize facing direction from camera if available
+	# Vector3.FORWARD is (0, 0, -1)
 	if facing_dir == Vector3.FORWARD:
 		var camera: Camera3D = get_viewport().get_camera_3d()
 		if camera != null:
@@ -66,3 +67,6 @@ func _physics_process(delta: float) -> void:
 	
 	# Check if facing an enemy
 	enemy_detector.check_facing_enemy(self, facing_dir)
+
+func get_ray_length() -> float:
+	return enemy_detector.get_ray_length()

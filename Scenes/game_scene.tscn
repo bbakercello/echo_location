@@ -18,4 +18,3 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 [node name="Enemy" parent="." instance=ExtResource("3_6h5vk")]
 physics_interpolation_mode = 1
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -10, 1, -10)
-collision_layer = 2
