@@ -1,0 +1,58 @@
+---
+alwaysApply: true
+---
+
+# Function Design Best Practices
+
+## Function Length and Complexity
+- Keep functions under 50 lines when possible
+- If a function exceeds 50 lines, consider splitting it into smaller functions
+- Each function should have a single, clear responsibility
+- Use descriptive function names that explain what they do
+
+## Function Naming
+- Use `snake_case` for all function names
+- Prefix private functions with `_`: `_check_enemy()`, `_handle_collision()`
+- Use verb-noun pattern: `check_enemy()`, `calculate_damage()`, `apply_force()`
+- Boolean functions should read like questions: `is_facing_enemy()`, `can_jump()`
+
+## Parameters and Return Values
+- **ALWAYS** type function parameters: `func move(direction: Vector3, speed: float) -> void`
+- **ALWAYS** type return values: `func get_health() -> int`
+- Use default parameters when appropriate: `func spawn_enemy(type: String = "basic")`
+- Limit function parameters to 3-4 when possible (consider using a data structure for more)
+
+## Early Returns
+- Use early returns to reduce nesting and improve readability
+- Check for null/invalid conditions first, return early
+- This makes the "happy path" more obvious
+
+## Example: Good Function Design
+```gdscript
+func _check_facing_enemy() -> void:
+    var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+    if space_state == null:
+        return  # Early return for invalid state
+    
+    var origin: Vector3 = global_position + Vector3.UP * RAY_HEIGHT
+    var end: Vector3 = origin + facing_dir.normalized() * RAY_LENGTH
+    
+    var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, end)
+    query.exclude = [get_rid()]
+    query.collide_with_bodies = true
+    
+    var hit: Dictionary = space_state.intersect_ray(query)
+    if hit.is_empty():
+        _set_facing(false)
+        return  # Early return
+    
+    var hit_node: Node = hit.get("collider") as Node
+    if hit_node != null and hit_node.is_in_group("enemies"):
+        _set_facing(true, hit_node)
+```
+
+## Error Handling in Functions
+- Validate inputs at the start of public functions
+- Return early for invalid states
+- Use `assert()` for debugging invariants
+- Handle null cases explicitly

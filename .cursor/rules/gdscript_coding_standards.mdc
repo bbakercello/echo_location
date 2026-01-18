@@ -1,0 +1,46 @@
+---
+alwaysApply: true
+---
+
+# GDScript Coding Standards
+
+## Type Safety
+- **ALWAYS** explicitly type all variables, function parameters, and return types
+- Use `var variable_name: Type` instead of `var variable_name := value` when type cannot be inferred
+- Never use untyped variables unless absolutely necessary
+- Use `@export` with explicit types: `@export var health: int = 100`
+- Use `@onready` for node references: `@onready var enemy: CharacterBody3D = $Enemy`
+
+## Naming Conventions
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_SPEED`, `RAY_LENGTH`)
+- **Variables**: `snake_case` (e.g., `player_health`, `facing_dir`)
+- **Functions**: `snake_case` (e.g., `_check_facing_enemy()`, `_handle_collision()`)
+- **Private functions**: Prefix with `_` (e.g., `_process_physics()`, `_on_enemy_died()`)
+- **Classes**: `PascalCase` (e.g., `BaseEnemy`, `PlayerController`)
+- **Scenes**: `snake_case.tscn` (e.g., `player.tscn`, `enemy.tscn`)
+
+## Code Organization
+- Keep functions under 50 lines when possible
+- Use early returns to reduce nesting
+- Group related constants at the top of the file
+- Separate concerns into different functions
+- One function should do one thing well
+
+## Comments and Documentation
+- Use `#` for comments, not docstrings (GDScript doesn't support docstrings)
+- Comment complex logic, not obvious code
+- Use comments to explain "why", not "what"
+- Keep comments up-to-date with code changes
+
+## Error Handling
+- Always check for null before using node references: `if node != null:`
+- Use `get_node_or_null()` instead of `get_node()` when node might not exist
+- Validate inputs in public functions
+- Use `assert()` for debugging invariants
+
+## Performance
+- Cache node references in `@onready` variables
+- Avoid calling `get_node()` repeatedly in loops
+- Use object pooling for frequently created/destroyed objects
+- Prefer `is_in_group()` over string comparisons
+- Use `match` statements for multiple conditions when appropriate

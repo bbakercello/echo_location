@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+---
+
+# Physics and Collision Best Practices
+
+## Collision Layers and Masks
+- **ALWAYS** use named constants for collision layers, never magic numbers
+- Define collision layer constants at the top of scripts or in a shared constants file
+- Use bit flags correctly: `collision_layer = 2` means layer 2 (bit 1)
+- Set both `collision_layer` (what layer this object is on) and `collision_mask` (what layers it can collide with)
+- Document layer assignments clearly
+
+## Raycasting
+- **ALWAYS** use `PhysicsDirectSpaceState3D` from `get_world_3d().direct_space_state`
+- Use `PhysicsRayQueryParameters3D.create(origin, end)` to create queries
+- **ALWAYS** exclude self from raycasts: `query.exclude = [get_rid()]`
+- Set `collision_mask` explicitly - don't rely on defaults
+- Check if space_state is null before using it
+- Use meaningful variable names: `origin`, `end`, `hit`, `collider`
+- Handle empty hit dictionaries: `if not hit.is_empty():`
+
+## CharacterBody3D Best Practices
+- Use `move_and_slide()` for character movement
+- Check `is_on_floor()` before applying jump logic
+- Use `get_slide_collision_count()` to check collisions after `move_and_slide()`
+- Handle collisions in `_physics_process()`, not `_process()`
+- Use `velocity` for movement, not direct position manipulation
+
+## Collision Detection
+- Use groups for logical categorization (e.g., "enemies", "players", "pickups")
+- Check groups with `is_in_group("group_name")` after type checking
+- Prefer groups over direct node references for finding objects
+- Use `get_tree().get_nodes_in_group()` to find all objects in a group
+
+## Performance Considerations
+- Don't cast rays every frame if not necessary - use timers or distance checks
+- Cache space_state references if used multiple times
+- Limit raycast distance to reasonable values
+- Use collision layers to filter unnecessary checks
