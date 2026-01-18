@@ -81,8 +81,8 @@ func _check_nearby_enemies(
 		# Use squared distance to avoid expensive sqrt
 		var enemy_dist_sq: float = to_enemy.length_squared()
 		
-		# Early exit: skip if too far (beyond wall OR beyond far range limit)
-		if enemy_dist_sq > max_dist_sq or enemy_dist_sq > FAR_RANGE_SQ:
+		# Early exit: skip if too far (beyond wall AND beyond far range limit)
+		if enemy_dist_sq > max_dist_sq and enemy_dist_sq > FAR_RANGE_SQ:
 			continue
 		
 		# Check if enemy is in front (dot product check)
@@ -104,9 +104,19 @@ func _set_facing(is_facing: bool, enemy_node: Node = null, distance: float = 0.0
 	# Handle state changes for facing enemy with minimal logging.
 	if is_facing and not was_facing_enemy:
 		if enemy_node != null:
+			# Build log message efficiently
 			var dist_str: String = "%.1f" % distance
-			var path_str: String = enemy_node.get_path()
-			print("NOW FACING ENEMY: ", path_str, " (distance: ", dist_str, ")")
+			var log_msg: String = "NOW FACING ENEMY: " + enemy_node.name + " (distance: " + dist_str
+			
+			# Log health if available (check property existence)
+			if "current_health" in enemy_node:
+				log_msg += ", health: " + str(enemy_node.get("current_health"))
+			
+			# Log frequency if it's a BaseEnemy (combine type check with access)
+			if enemy_node is BaseEnemy:
+				log_msg += ", frequency: " + "%.0f" % (enemy_node as BaseEnemy).frequency_hz + " Hz"
+			
+			print(log_msg + ")")
 			if on_enemy_detected.is_valid():
 				on_enemy_detected.call(enemy_node, distance)
 		else:
@@ -119,4 +129,3 @@ func _set_facing(is_facing: bool, enemy_node: Node = null, distance: float = 0.0
 			on_enemy_lost.call()
 	
 	was_facing_enemy = is_facing
-
