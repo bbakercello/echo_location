@@ -5,8 +5,12 @@ class_name BaseEnemy
 var frequency_hz: float = 0.0
 var rng := RandomNumberGenerator.new()
 
-# To Do: In the future we might want a spawner class where we can initialize enemy objects and call our ready functions.
+# To Do: In the future we might want a spawner class where we can initialize 
+# enemy objects and call our ready functions.
 func _ready() -> void:
+    # Ensure enemy is in the "enemies" group for raycast detection
+    if not is_in_group("enemies"):
+        add_to_group("enemies")
     rng.randomize()
     roll_frequency()
 

@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://cpo7b171ygn86"]
 
 [ext_resource type="PackedScene" uid="uid://cnqa70gfpwi1n" path="res://scenes/grey_box.tscn" id="1_x87qo"]
-[ext_resource type="PackedScene" uid="uid://blmfjv8bs3bh7" path="res://scenes/player.tscn" id="2_b6fju"]
+[ext_resource type="PackedScene" uid="uid://dbmhc4utgu8qj" path="res://scenes/actors/player.tscn" id="2_b6fju"]
 [ext_resource type="PackedScene" uid="uid://cp76b0p4bm5k8" path="res://scenes/enemy.tscn" id="3_6h5vk"]
 
 [node name="Game Scene" type="Node3D"]
@@ -18,3 +18,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 [node name="Enemy" parent="." instance=ExtResource("3_6h5vk")]
 physics_interpolation_mode = 1
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -10, 1, -10)
+collision_layer = 2
