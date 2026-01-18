@@ -18,20 +18,35 @@ var on_enemy_detected: Callable
 var on_enemy_lost: Callable
 
 func check_facing_enemy(character: CharacterBody3D, facing_dir: Vector3) -> void:
+
+	# Set the player mask to 1
+	
 	# Cast forward ray to detect enemies
 	var space_state: PhysicsDirectSpaceState3D = character.get_world_3d().direct_space_state
 	if space_state == null:
 		return
 	
+	# Define the origin, facing direction and endpoint as vector constants
+	# Vector3.UP is (0, 1, 0)
 	var origin: Vector3 = character.global_position + Vector3.UP * RAY_HEIGHT
 	var facing_normalized: Vector3 = facing_dir.normalized()
 	var end: Vector3 = origin + facing_normalized * RAY_LENGTH
 	
+	# Create the query for the raycast using the origin, facing direction and endpoint
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, end)
+	# Exclude the character from the raycast
 	query.exclude = [character.get_rid()]
+	# Collide with bodies
 	query.collide_with_bodies = true
+	# Don't collide with areas
 	query.collide_with_areas = false
-	query.collision_mask = 0xFFFFFFFF
+	# Collide with all layers - seems inefficient to collide with all layers
+	# TODO: Optimize this to only collide with the layers that are needed
+	query.collision_mask = 1 | 2
+
+	# log the player mask, enemy layer and player layer
+	
+
 	
 	var hit: Dictionary = space_state.intersect_ray(query)
 	
@@ -39,12 +54,14 @@ func check_facing_enemy(character: CharacterBody3D, facing_dir: Vector3) -> void
 		_set_facing(false)
 		return
 	
+	# Check if the hit is a Node and if it is, set the facing to true
 	var hit_node: Node = hit.get("collider") as Node
 	if hit_node == null:
 		_set_facing(false)
 		return
 	
 	# If we hit an enemy directly, we're facing it
+	# We added the enemies to the "enemies" group in the Enemy scene
 	if hit_node.is_in_group("enemies"):
 		var hit_pos: Vector3 = hit.get("position", Vector3.ZERO)
 		var hit_distance: float = hit_pos.distance_to(origin)
