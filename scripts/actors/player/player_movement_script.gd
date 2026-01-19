@@ -23,6 +23,10 @@ func _ready() -> void:
 	
 	# Initialize components
 	enemy_detector = EnemyDetector.new()
+	
+	# Connect signals for enemy detection events
+	enemy_detector.enemy_detected.connect(_on_enemy_detected)
+	enemy_detector.enemy_lost.connect(_on_enemy_lost)
 
 func _physics_process(delta: float) -> void:
 	# Player movement script.
@@ -68,5 +72,12 @@ func _physics_process(delta: float) -> void:
 	# Check if facing an enemy
 	enemy_detector.check_facing_enemy(self, facing_dir)
 
-func get_ray_length() -> float:
-	return enemy_detector.get_ray_length()
+
+func _on_enemy_detected(_enemy: Node = null, _distance: float = 0.0) -> void:
+	# Called when enemy is detected - can be used for UI updates, audio, etc.
+	pass
+
+
+func _on_enemy_lost() -> void:
+	# Called when enemy is no longer detected
+	pass

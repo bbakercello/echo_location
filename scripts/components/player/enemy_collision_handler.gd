@@ -17,7 +17,7 @@ func handle_collisions(character: CharacterBody3D) -> void:
 			continue
 		
 		var node: Node = collider as Node
-        # We assigned the enemies to the "enemies" group in the Enemy scene
+		# We assigned the enemies to the "enemies" group in the Enemy scene
 		if not node.is_in_group("enemies"):
 			continue
 		

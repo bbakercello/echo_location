@@ -10,6 +10,7 @@
 albedo_color = Color(0.09019608, 0.69411767, 1, 1)
 
 [node name="CharacterBody3D" type="CharacterBody3D"]
+collision_layer = 1
 collision_mask = 3
 script = ExtResource("1_v0iea")
 
