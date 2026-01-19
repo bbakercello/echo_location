@@ -76,6 +76,11 @@ func _find_closest_enemy_in_cone(
 	origin: Vector3,
 	facing: Vector3
 ) -> Node:
+	# Creating an array of enemies is more efficient than calling
+	# get_tree().get_nodes_in_group() multiple times.
+	# But still we will need to be more careful with the performance of this function.
+	# Scanning the entire scene for enemies every frame is not efficient
+	# especially if there are a lot of enemies.
 	var enemies: Array[Node] = character.get_tree().get_nodes_in_group("enemies")
 	var char_pos: Vector3 = character.global_position
 	var char_rid: RID = character.get_rid()
