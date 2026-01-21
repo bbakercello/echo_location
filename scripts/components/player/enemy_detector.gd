@@ -48,6 +48,12 @@ func _update_cached_values() -> void:
 
 
 func check_facing_enemy(character: CharacterBody3D, facing_dir: Vector3) -> void:
+
+	# Left mouse button control triggers the raycast/detection
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_set_facing(false, null, 0.0)
+		return
+		
 	# Main detection function - checks for enemies within cone area
 	var space_state: PhysicsDirectSpaceState3D = character.get_world_3d().direct_space_state
 	if space_state == null:
