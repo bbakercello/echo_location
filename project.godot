@@ -55,3 +55,7 @@ ui_down={
 3d_physics/layer_1="Player"
 3d_physics/layer_2="Enemies"
 3d_physics/layer_3="Environment"
+
+[autoload]
+
+GameConstants="*res://scripts/game_constants.gd"
