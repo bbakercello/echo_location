@@ -21,10 +21,13 @@ const LAYER_ENVIRONMENT: int = 4  # Matches layer_3 in project.godot
 const DETECTION_MIN_DISTANCE_SQ: float = 0.0001  # Min squared distance to prevent division by zero
 const DETECTION_MIN_FACING_LENGTH_SQ: float = 0.0001  # Min facing vector length squared
 
-# LOD (Level of Detail) system constants
-const DETECTION_LOD_CLOSE_RANGE_RATIO: float = 0.5  # Objects within 50% of range get full checks
-const DETECTION_LOD_MID_RANGE_RATIO: float = 0.75  # Objects within 75% get reduced checks
-const DETECTION_LOD_MID_RANGE_CHECK_INTERVAL: int = 2  # Check mid-range objects every 2 frames
+# Raycast optimization constants (distance-based raycast skipping)
+# Objects within 50% of range get full checks
+const DETECTION_RAYCAST_OPTIMIZATION_CLOSE_RANGE_RATIO: float = 0.5
+# Objects within 75% get reduced checks
+const DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_RATIO: float = 0.75
+# Check mid-range objects every 2 frames
+const DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_CHECK_INTERVAL: int = 2
 
 # Spatial partitioning constants
 const DETECTION_SPATIAL_CELL_SIZE_RATIO: float = 0.33  # Cell size as ratio of detection range

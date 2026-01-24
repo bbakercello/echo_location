@@ -11,7 +11,7 @@
 #       "enemies",  # detection_group
 #       true,  # update_continuously
 #       true,  # enable_spatial_partitioning
-#       true   # enable_lod_system
+#       true   # enable_raycast_optimization
 #   )
 #   detector.check_facing_object(detector_owner, facing_direction)
 #   var detected: Array[Node] = detector.get_detected_objects()
@@ -57,7 +57,7 @@ var update_continuously: bool = true
 
 # Optimization settings
 var enable_spatial_partitioning: bool = true  # Use spatial cells to reduce checks
-var enable_lod_system: bool = true  # Skip raycasts for distant objects
+var enable_raycast_optimization: bool = true  # Skip raycasts for distant objects
 # Auto-disable optimizations for small scenes (<20 objects) for better performance
 var _auto_disable_optimizations: bool = true
 
@@ -72,7 +72,7 @@ var _range_sq: float
 var _cos_cone_angle: float
 var _cos_cone_angle_sq: float  # Cached squared value for cone angle check optimization
 
-# Cached LOD thresholds (only recalculated when range changes)
+# Cached raycast optimization thresholds (only recalculated when range changes)
 var _cached_close_range_sq: float
 var _cached_mid_range_sq: float
 
@@ -115,7 +115,8 @@ signal error_occurred(error: DetectionError)  # Emitted when a critical error oc
 ## @param p_detection_group: Group name to detect (e.g., "enemies", "items")
 ## @param p_update_continuously: If true, updates every frame. If false, on-demand
 ## @param p_enable_spatial_partitioning: Enable spatial optimization (auto-disabled <20 objects)
-## @param p_enable_lod_system: Enable LOD raycast skipping (auto-disabled <20 objects)
+## @param p_enable_raycast_optimization: Enable distance-based raycast skipping
+##   (auto-disabled <20 objects)
 func _init(
 	p_collision_mask: int,  # Required - must be explicitly provided
 	p_detection_range: float = GameConstants.DETECTION_DEFAULT_RANGE,
@@ -124,7 +125,7 @@ func _init(
 	p_detection_group: String = "",
 	p_update_continuously: bool = true,
 	p_enable_spatial_partitioning: bool = true,
-	p_enable_lod_system: bool = true
+	p_enable_raycast_optimization: bool = true
 ) -> void:
 	# Input validation with custom error handling
 	# Use helper function to reduce code duplication
@@ -168,7 +169,7 @@ func _init(
 	detection_group = p_detection_group
 	update_continuously = p_update_continuously
 	enable_spatial_partitioning = p_enable_spatial_partitioning
-	enable_lod_system = p_enable_lod_system
+	enable_raycast_optimization = p_enable_raycast_optimization
 	_update_cached_values()
 
 
@@ -183,9 +184,9 @@ func _update_cached_values() -> void:
 	# Update spatial cell size based on detection range
 	_spatial_cell_size = detection_range * GameConstants.DETECTION_SPATIAL_CELL_SIZE_RATIO
 	
-	# Update cached LOD thresholds (only recalculated when range changes)
-	var close_ratio: float = GameConstants.DETECTION_LOD_CLOSE_RANGE_RATIO
-	var mid_ratio: float = GameConstants.DETECTION_LOD_MID_RANGE_RATIO
+	# Update cached raycast optimization thresholds (only recalculated when range changes)
+	var close_ratio: float = GameConstants.DETECTION_RAYCAST_OPTIMIZATION_CLOSE_RANGE_RATIO
+	var mid_ratio: float = GameConstants.DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_RATIO
 	var close_ratio_sq: float = close_ratio * close_ratio
 	var mid_ratio_sq: float = mid_ratio * mid_ratio
 	_cached_close_range_sq = _range_sq * close_ratio_sq
@@ -291,7 +292,7 @@ func _find_all_objects_in_cone(
 	
 	# Get objects to check - use spatial partitioning if enabled and beneficial
 	var group_members: Array[Node] = _get_group_members(detector_owner)
-	# Determine if optimizations should be used (for LOD system and spatial partitioning)
+	# Determine if optimizations should be used (for raycast optimization and spatial partitioning)
 	var should_use_optimizations: bool = _should_use_optimizations(group_members)
 	var objects: Array[Node] = _get_objects_to_check(
 		detector_owner, owner_pos, group_members, should_use_optimizations
@@ -307,7 +308,7 @@ func _find_all_objects_in_cone(
 	detection_params.origin = origin
 	detection_params.char_rid = owner_rid
 	detection_params.space_state = space_state
-	# Use cached LOD thresholds (no Dictionary allocation)
+	# Use cached raycast optimization thresholds (no Dictionary allocation)
 	detection_params.close_range_sq = _cached_close_range_sq
 	detection_params.mid_range_sq = _cached_mid_range_sq
 	detection_params.should_use_optimizations = should_use_optimizations
@@ -343,8 +344,8 @@ func _get_objects_to_check(
 	return group_members
 
 
-# Removed _calculate_lod_thresholds() - now using cached values directly
-# LOD thresholds are calculated once in _update_cached_values() and stored in
+# Removed _calculate_raycast_optimization_thresholds() - now using cached values directly
+# Raycast optimization thresholds are calculated once in _update_cached_values() and stored in
 # _cached_close_range_sq and _cached_mid_range_sq to avoid Dictionary allocation
 
 
@@ -382,9 +383,9 @@ func _is_object_in_cone(object_node: Node, params: DetectionParams) -> bool:
 	if (facing_dot_to_object * facing_dot_to_object) < (_cos_cone_angle_sq * object_dist_sq):
 		return false  # Outside cone angle
 	
-	# LOD system: May skip raycast for distant objects
+	# Raycast optimization: May skip raycast for distant objects
 	var should_check_los: bool = true
-	if enable_lod_system and params.should_use_optimizations:
+	if enable_raycast_optimization and params.should_use_optimizations:
 		should_check_los = _should_check_line_of_sight(
 			object_dist_sq, params.close_range_sq, params.mid_range_sq, object_node
 		)
@@ -666,13 +667,13 @@ func _get_cell_key(cell_x: int, cell_z: int) -> int:
 
 
 # ============================================================================
-# LOD SYSTEM FUNCTIONS
+# RAYCAST OPTIMIZATION FUNCTIONS
 # ============================================================================
 
 func _should_check_line_of_sight(
 	dist_sq: float, close_range_sq: float, mid_range_sq: float, object_node: Node
 ) -> bool:
-	# Determines if we should check line of sight based on distance (LOD)
+	# Determines if we should check line of sight based on distance (raycast optimization)
 	# Uses deterministic frame-based approach to avoid flickering
 	# Close objects: Always check
 	# Mid-range objects: Check every N frames with object-specific offset (staggered)
@@ -683,13 +684,15 @@ func _should_check_line_of_sight(
 		# Mid-range: Check every N frames with object-specific offset
 		# This staggers checks across objects to avoid frame spikes
 		var current_frame: int = Engine.get_process_frames()
-		var check_interval: int = GameConstants.DETECTION_LOD_MID_RANGE_CHECK_INTERVAL
+		var check_interval: int = (
+			GameConstants.DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_CHECK_INTERVAL
+		)
 		var obj_offset: int = object_node.get_instance_id() % check_interval
 		return ((current_frame + obj_offset) % check_interval) == 0
 	
 	# Objects beyond mid-range are already filtered by distance check in _is_object_in_cone()
 	# This code path should not be reached, but if it is, we should not check line of sight
-	# (objects beyond mid-range don't need frequent LOS checks due to LOD system)
+	# (objects beyond mid-range don't need frequent LOS checks due to raycast optimization)
 	return false
 
 
