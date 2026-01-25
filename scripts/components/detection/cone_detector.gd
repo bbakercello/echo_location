@@ -330,13 +330,18 @@ func _find_all_objects_in_cone(
 	# Populates result_array with all objects in the detection cone
 	# Reuses existing array to avoid allocations
 	
-	# Validate detector_owner is still valid
+	# Validate detector_owner is still valid 
+	# This could happen if the owner has been freed or removed from the scene
+	# Like DYING
 	if not is_instance_valid(detector_owner):
 		return
 	
+	# Define owner RID to later use for raycast exclude list
 	var owner_rid: RID = detector_owner.get_rid()
 	
 	# Get objects to check - use spatial partitioning if enabled and beneficial
+	# This is the list of objects that are in the detection group and are valid
+	# It is cached and refreshed periodically to avoid re-calculating it every frame
 	var group_members: Array[Node] = _get_group_members(detector_owner)
 	# Determine if optimizations should be used (for raycast optimization and spatial partitioning)
 	var should_use_optimizations: bool = _should_use_optimizations(group_members)
@@ -387,12 +392,6 @@ func _get_objects_to_check(
 		return _get_objects_in_nearby_cells(owner_pos, group_members)
 	
 	return group_members
-
-
-# Removed _calculate_raycast_optimization_thresholds() - now using cached values directly
-# Raycast optimization thresholds are calculated once in _update_cached_values() and stored in
-# _cached_close_range_sq and _cached_mid_range_sq to avoid Dictionary allocation
-
 
 func _is_object_in_cone(object_node: Node, params: DetectionParams) -> bool:
 	# Checks if an object meets all detection criteria (distance, angle, line of sight)
@@ -492,11 +491,7 @@ func _has_line_of_sight(
 
 func _get_group_members(detector_owner: CharacterBody3D) -> Array[Node]:
 	# Returns cached group members, refreshing cache periodically
-	# Input validation
-	if not is_instance_valid(detector_owner):
-		_cached_group_members.clear()
-		return []
-	
+	# Note: detector_owner validity is already checked by caller (_find_all_objects_in_cone)
 	var tree: SceneTree = detector_owner.get_tree()
 	if tree == null:
 		_cached_group_members.clear()
@@ -507,6 +502,7 @@ func _get_group_members(detector_owner: CharacterBody3D) -> Array[Node]:
 	var refresh_interval: int = GameConstants.DETECTION_CACHE_REFRESH_INTERVAL
 	_cache_frame_counter = (_cache_frame_counter + 1) % refresh_interval
 	if _cached_group_members.is_empty() or _cache_frame_counter == 0:
+		# Calculate the group members
 		_refresh_group_cache(tree)
 		# Only cleanup during cache refresh - validity is also checked in _is_object_in_cone()
 		_cleanup_invalid_nodes()
