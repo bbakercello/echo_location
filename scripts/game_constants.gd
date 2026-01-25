@@ -31,7 +31,8 @@ const DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_CHECK_INTERVAL: int = 2
 
 # Spatial partitioning constants
 const DETECTION_SPATIAL_CELL_SIZE_RATIO: float = 0.33  # Cell size as ratio of detection range
-const DETECTION_SPATIAL_REBUILD_COOLDOWN: int = 60  # Min frames between rebuilds (~1s at 60fps)
+# Reduced from 60 to 20 frames for faster action games (~0.33s at 60fps)
+const DETECTION_SPATIAL_REBUILD_COOLDOWN: int = 20
 const DETECTION_SPATIAL_MIN_OBJECTS: int = 20  # Auto-disable spatial partitioning if fewer objects
 
 # Group member caching
@@ -51,3 +52,18 @@ const DETECTION_SPATIAL_MAX_CELL_RADIUS: int = 10
 const DETECTION_DEFAULT_RANGE: float = 60.0  # Default detection range in units
 const DETECTION_DEFAULT_HEIGHT: float = 0.5  # Default detection height offset
 const DETECTION_DEFAULT_CONE_ANGLE_RAD: float = 1.047  # Default cone angle (60 degrees)
+
+# ============================================================================
+# TARGET PRIORITIZATION CONSTANTS
+# ============================================================================
+# Weights for target scoring (should sum to 1.0 for normalized scores)
+const TARGET_PRIORITY_DISTANCE_WEIGHT: float = 0.6  # Weight for distance (closer = higher)
+const TARGET_PRIORITY_ANGLE_WEIGHT: float = 0.4  # Weight for angle (more centered = higher)
+
+# Target persistence (sticky targeting)
+const TARGET_PERSISTENCE_FRAMES: int = 12  # ~0.2s at 60fps - how long to prefer current target
+const TARGET_PERSISTENCE_BONUS: float = 0.15  # Score bonus for current target (prevents flickering)
+
+# Angle scoring epsilon values (for floating-point comparisons)
+const ANGLE_DENOMINATOR_EPSILON: float = 0.001  # Min denominator to prevent division by zero
+const ANGLE_DIRECT_HIT_THRESHOLD: float = 0.999  # Dot product threshold for "direct hit"

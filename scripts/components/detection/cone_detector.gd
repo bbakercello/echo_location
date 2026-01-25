@@ -2,6 +2,13 @@
 # Can be attached to any CharacterBody3D that needs object detection
 # Configured via detection_group to detect different types (enemies, items, interactables, etc.)
 #
+# FEATURES:
+# - Cone-shaped detection with configurable range and angle
+# - Target prioritization: combines distance (60%) + angle alignment (40%)
+# - Target persistence: prevents flickering between similar-priority targets (Hades-style)
+# - Spatial partitioning optimization for large numbers of objects
+# - Raycast optimization for distant objects
+#
 # USAGE EXAMPLE:
 #   var detector = ConeDetector.new(
 #       GameConstants.LAYER_ENEMY | GameConstants.LAYER_ENVIRONMENT,
@@ -14,12 +21,15 @@
 #       true   # enable_raycast_optimization
 #   )
 #   detector.check_facing_object(detector_owner, facing_direction)
+#
+#   # Get all detected objects (unsorted)
 #   var detected: Array[Node] = detector.get_detected_objects()
-# Some future considerations:
-# - get_world_3d() and get_tree() is called multiple times in thsi script. 
-#   This could be optimized by caching the values. 
-# However, if if the character is moving or the scene is changing etc,
-# the cached values will be invalid.
+#
+#   # Get best target (prioritized + persistent)
+#   var best: Node = detector.get_best_target()
+#
+#   # Get all targets sorted by priority
+#   var prioritized: Array[Node] = detector.get_prioritized_targets()
 class_name ConeDetector
 extends RefCounted
 
@@ -90,15 +100,22 @@ var _last_partition_pos: Vector3 = Vector3.ZERO
 var _partition_dirty: bool = true
 var _last_rebuild_frame: int = -1
 var _spatial_cell_size: float = 0.0  # Calculated from detection_range
+var _spatial_cell_size_sq: float = 0.0  # Cached squared value
+var _cached_cell_radius: int = 1  # Cached cell radius for spatial queries
 
 # Reusable objects to avoid per-frame allocations
 var _reusable_detection_params: DetectionParams = null
 var _reusable_objects_dict: Dictionary = {}  # Reused for spatial partitioning
 var _reusable_objects_array: Array[Node] = []  # Reused for array conversion
 var _reusable_exclude_array: Array[RID] = []  # Reused for raycast exclude list
+var _reusable_ray_query: PhysicsRayQueryParameters3D = null  # Reused for raycasts
 
 # State - private, access via get_detected_objects()
 var _detected_objects: Array[Node] = []
+
+# Target prioritization - delegated to TargetPrioritizer
+var _prioritizer: TargetPrioritizer = null
+var _last_facing_dir: Vector3 = Vector3.FORWARD  # Cached facing direction for prioritizer
 
 # Error handling
 var _last_error: DetectionError = null  # Last error that occurred
@@ -171,6 +188,9 @@ func _init(
 	enable_spatial_partitioning = p_enable_spatial_partitioning
 	enable_raycast_optimization = p_enable_raycast_optimization
 	_update_cached_values()
+	
+	# Initialize target prioritizer
+	_prioritizer = TargetPrioritizer.new()
 
 
 func _update_cached_values() -> void:
@@ -181,8 +201,18 @@ func _update_cached_values() -> void:
 	_range_sq = detection_range * detection_range
 	_cos_cone_angle = cos(cone_angle_rad)
 	_cos_cone_angle_sq = _cos_cone_angle * _cos_cone_angle  # Cache squared value for optimization
+	
 	# Update spatial cell size based on detection range
 	_spatial_cell_size = detection_range * GameConstants.DETECTION_SPATIAL_CELL_SIZE_RATIO
+	_spatial_cell_size_sq = _spatial_cell_size * _spatial_cell_size
+	
+	# Cache cell radius calculation (avoid ceil/division every frame)
+	if _spatial_cell_size > 0.0:
+		var cells_to_check: float = ceil(detection_range / _spatial_cell_size)
+		var calculated_radius: int = int((cells_to_check + 1.0) / 2.0)
+		_cached_cell_radius = mini(calculated_radius, GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS)
+	else:
+		_cached_cell_radius = GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS
 	
 	# Update cached raycast optimization thresholds (only recalculated when range changes)
 	var close_ratio: float = GameConstants.DETECTION_RAYCAST_OPTIMIZATION_CLOSE_RANGE_RATIO
@@ -262,20 +292,33 @@ func check_facing_object(detector_owner: CharacterBody3D, facing_dir: Vector3) -
 	
 	var facing_normalized: Vector3 = facing_dir.normalized()
 	
-	# Use cached height offset to avoid Vector3 allocation
-	var origin: Vector3 = detector_owner.global_position + _cached_height_offset
+	# Cache facing direction for target scoring
+	_last_facing_dir = facing_normalized
 	
-	# Build new array first, then swap atomically to avoid race conditions
+	# Cache position once to avoid multiple global_position accesses
+	var owner_pos: Vector3 = detector_owner.global_position
+	var origin: Vector3 = owner_pos + _cached_height_offset
+	
 	# Clear and reuse array to avoid allocation
 	_detected_objects.clear()
 	_find_all_objects_in_cone(
-		space_state, detector_owner, origin, facing_normalized, _detected_objects
+		space_state, detector_owner, owner_pos, origin, facing_normalized, _detected_objects
+	)
+	
+	# Update target prioritization
+	_prioritizer.update(
+		_detected_objects,
+		owner_pos,
+		_last_facing_dir,
+		detection_range,
+		_cos_cone_angle
 	)
 
 
 func _find_all_objects_in_cone(
 	space_state: PhysicsDirectSpaceState3D,
 	detector_owner: CharacterBody3D,
+	owner_pos: Vector3,
 	origin: Vector3,
 	facing: Vector3,
 	result_array: Array[Node]
@@ -287,7 +330,6 @@ func _find_all_objects_in_cone(
 	if not is_instance_valid(detector_owner):
 		return
 	
-	var owner_pos: Vector3 = detector_owner.global_position
 	var owner_rid: RID = detector_owner.get_rid()
 	
 	# Get objects to check - use spatial partitioning if enabled and beneficial
@@ -295,7 +337,7 @@ func _find_all_objects_in_cone(
 	# Determine if optimizations should be used (for raycast optimization and spatial partitioning)
 	var should_use_optimizations: bool = _should_use_optimizations(group_members)
 	var objects: Array[Node] = _get_objects_to_check(
-		detector_owner, owner_pos, group_members, should_use_optimizations
+		owner_pos, group_members, should_use_optimizations
 	)
 	
 	# Reuse DetectionParams object to avoid allocation
@@ -332,14 +374,13 @@ func _should_use_optimizations(group_members: Array[Node]) -> bool:
 
 
 func _get_objects_to_check(
-	detector_owner: CharacterBody3D,
 	owner_pos: Vector3,
 	group_members: Array[Node],
 	should_use_optimizations: bool
 ) -> Array[Node]:
 	# Returns the list of objects to check, using spatial partitioning if beneficial
 	if should_use_optimizations and enable_spatial_partitioning:
-		return _get_objects_in_nearby_cells(detector_owner, owner_pos, group_members)
+		return _get_objects_in_nearby_cells(owner_pos, group_members)
 	
 	return group_members
 
@@ -416,17 +457,23 @@ func _has_line_of_sight(
 	if not is_instance_valid(target_node):
 		return false
 	
-	# Create raycast query (must create new each time as properties may not be modifiable)
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, target)
-	# Reuse exclude array to avoid allocation
+	# Reuse raycast query object to avoid per-raycast allocation
+	if _reusable_ray_query == null:
+		_reusable_ray_query = PhysicsRayQueryParameters3D.new()
+		_reusable_ray_query.collide_with_bodies = true
+		_reusable_ray_query.collide_with_areas = false
+	
+	# Update query parameters
+	_reusable_ray_query.from = origin
+	_reusable_ray_query.to = target
+	_reusable_ray_query.collision_mask = collision_mask
+	
+	# Reuse exclude array
 	_reusable_exclude_array.clear()
 	_reusable_exclude_array.append(exclude_rid)
-	query.exclude = _reusable_exclude_array
-	query.collide_with_bodies = true
-	query.collide_with_areas = false
-	query.collision_mask = collision_mask
+	_reusable_ray_query.exclude = _reusable_exclude_array
 	
-	var hit: Dictionary = space_state.intersect_ray(query)
+	var hit: Dictionary = space_state.intersect_ray(_reusable_ray_query)
 	
 	# Valid if: no hit (clear) OR hit the target directly
 	if hit.is_empty():
@@ -457,9 +504,8 @@ func _get_group_members(detector_owner: CharacterBody3D) -> Array[Node]:
 	_cache_frame_counter = (_cache_frame_counter + 1) % refresh_interval
 	if _cached_group_members.is_empty() or _cache_frame_counter == 0:
 		_refresh_group_cache(tree)
-	
-	# Filter out any invalid nodes from cache (defensive cleanup)
-	_cleanup_invalid_nodes()
+		# Only cleanup during cache refresh - validity is also checked in _is_object_in_cone()
+		_cleanup_invalid_nodes()
 	
 	return _cached_group_members
 
@@ -499,16 +545,14 @@ func _cleanup_invalid_nodes() -> void:
 
 
 ## Returns array of currently detected objects
-## @return: Array[Node] - Copy of detected objects (safe to modify)
+## Note: Returns internal array - call duplicate() if you need to modify it
+## @return: Array[Node] - Internal array of detected objects
 ## Example:
 ##   var detected: Array[Node] = detector.get_detected_objects()
 ##   for obj in detected:
 ##       print("Detected: ", obj.name)
 func get_detected_objects() -> Array[Node]:
-	# Returns a copy to prevent external modification of internal state
-	# Use assert for debugging invariants
-	assert(_detected_objects != null, "_detected_objects should never be null")
-	return _detected_objects.duplicate()
+	return _detected_objects
 
 
 ## Convenience method to check if any objects are currently detected
@@ -517,7 +561,40 @@ func get_detected_objects() -> Array[Node]:
 ##   if detector.is_detecting_objects():
 ##       print("Something detected!")
 func is_detecting_objects() -> bool:
-	return _detected_objects.size() > 0
+	return not _detected_objects.is_empty()
+
+
+# ============================================================================
+# TARGET PRIORITIZATION (delegated to TargetPrioritizer)
+# ============================================================================
+
+## Returns detected objects sorted by priority score (best target first)
+## Note: Returns internal array - call duplicate() if you need to modify it
+func get_prioritized_targets() -> Array[Node]:
+	return _prioritizer.get_prioritized_targets()
+
+
+## Returns the single best target based on priority scoring (O(n), efficient)
+func get_best_target() -> Node:
+	return _prioritizer.get_best_target()
+
+
+## Returns the current locked target (may be null)
+## The locked target receives a score bonus to prevent flickering
+func get_current_target() -> Node:
+	return _prioritizer.get_current_target()
+
+
+## Clears the current target lock, forcing re-evaluation on next update
+func clear_target_lock() -> void:
+	_prioritizer.clear_target_lock()
+
+
+## Returns the target_changed signal from the prioritizer
+## Connect to this for target change notifications:
+##   detector.get_target_changed_signal().connect(_on_target_changed)
+func get_target_changed_signal() -> Signal:
+	return _prioritizer.target_changed
 
 
 # ============================================================================
@@ -525,7 +602,7 @@ func is_detecting_objects() -> bool:
 # ============================================================================
 
 func _get_objects_in_nearby_cells(
-	_detector_owner: CharacterBody3D, owner_pos: Vector3, group_members: Array[Node]
+	owner_pos: Vector3, group_members: Array[Node]
 ) -> Array[Node]:
 	# Returns objects in nearby spatial cells (dynamic grid based on detection_range)
 	# Uses O(1) deduplication with Dictionary for performance
@@ -560,12 +637,11 @@ func _get_objects_in_nearby_cells(
 func _update_spatial_partition_if_needed(owner_pos: Vector3, group_members: Array[Node]) -> void:
 	# Checks if spatial partition needs rebuilding and rebuilds if necessary
 	var current_frame: int = Engine.get_process_frames()
-	var cell_size_sq: float = _spatial_cell_size * _spatial_cell_size
 	var should_rebuild: bool = _partition_dirty
 	
-	# Check if detector owner moved significantly
+	# Check if detector owner moved significantly (use cached squared value)
 	var moved_significantly: bool = (
-		owner_pos.distance_squared_to(_last_partition_pos) > cell_size_sq
+		owner_pos.distance_squared_to(_last_partition_pos) > _spatial_cell_size_sq
 	)
 	if moved_significantly:
 		# Only rebuild if cooldown has passed
@@ -582,15 +658,8 @@ func _update_spatial_partition_if_needed(owner_pos: Vector3, group_members: Arra
 
 
 func _calculate_cell_radius() -> int:
-	# Calculates how many cells to check in each direction, capped at maximum
-	# Defensive check: prevent division by zero
-	if _spatial_cell_size <= 0.0:
-		return GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS  # Return max as fallback
-	
-	var cells_to_check: float = ceil(detection_range / _spatial_cell_size)
-	var calculated_radius: int = int((cells_to_check + 1.0) / 2.0)  # Round up
-	var max_radius: int = GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS
-	return min(calculated_radius, max_radius)
+	# Returns cached cell radius (calculated in _update_cached_values)
+	return _cached_cell_radius
 
 
 func _collect_objects_from_cells(
@@ -614,12 +683,12 @@ func _collect_objects_from_cells(
 func _convert_dict_to_array(objects_dict: Dictionary) -> Array[Node]:
 	# Converts dictionary values to typed array
 	# Reuses array to avoid allocation
+	# Note: Returns internal array - caller should not store reference long-term
 	_reusable_objects_array.clear()
 	for obj in objects_dict.values():
 		if is_instance_valid(obj) and obj is Node:
 			_reusable_objects_array.append(obj as Node)
-	# Return a copy to avoid external modification of internal state
-	return _reusable_objects_array.duplicate()
+	return _reusable_objects_array
 
 
 func _rebuild_spatial_partition(group_members: Array[Node]) -> void:
@@ -675,25 +744,28 @@ func _should_check_line_of_sight(
 ) -> bool:
 	# Determines if we should check line of sight based on distance (raycast optimization)
 	# Uses deterministic frame-based approach to avoid flickering
-	# Close objects: Always check
-	# Mid-range objects: Check every N frames with object-specific offset (staggered)
+	# Close objects (≤50% range): Always check
+	# Mid-range objects (50-75% range): Check every 2 frames
+	# Far objects (75-100% range): Check every 4 frames
 	if dist_sq <= close_range_sq:
 		return true  # Always check close objects
 	
+	var current_frame: int = Engine.get_process_frames()
+	var obj_offset: int = object_node.get_instance_id()
+	
 	if dist_sq <= mid_range_sq:
-		# Mid-range: Check every N frames with object-specific offset
-		# This staggers checks across objects to avoid frame spikes
-		var current_frame: int = Engine.get_process_frames()
+		# Mid-range: Check every 2 frames with object-specific offset
 		var check_interval: int = (
 			GameConstants.DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_CHECK_INTERVAL
 		)
-		var obj_offset: int = object_node.get_instance_id() % check_interval
 		return ((current_frame + obj_offset) % check_interval) == 0
 	
-	# Objects beyond mid-range are already filtered by distance check in _is_object_in_cone()
-	# This code path should not be reached, but if it is, we should not check line of sight
-	# (objects beyond mid-range don't need frequent LOS checks due to raycast optimization)
-	return false
+	# Far objects (75-100% range): Check every 4 frames (half as often as mid-range)
+	# Still need LOS checks to prevent detecting through walls
+	var far_check_interval: int = (
+		GameConstants.DETECTION_RAYCAST_OPTIMIZATION_MID_RANGE_CHECK_INTERVAL * 2
+	)
+	return ((current_frame + obj_offset) % far_check_interval) == 0
 
 
 # ============================================================================
@@ -775,6 +847,9 @@ func reset() -> void:
 	_cache_frame_counter = 0
 	_last_rebuild_frame = -1
 	_last_partition_pos = Vector3.ZERO
+	_last_facing_dir = Vector3.FORWARD
+	# Reset target prioritizer
+	_prioritizer.reset()
 
 
 ## Validates that the current configuration is valid
