@@ -54,9 +54,9 @@ static func create_from_target(
 	
 	var dist_sq: float = to_target.length_squared()
 	
-	# Prevent division by zero for very close targets
+	# Very close targets: return max score (avoid division issues)
 	if dist_sq < GameConstants.DETECTION_MIN_DISTANCE_SQ:
-		dist_sq = GameConstants.DETECTION_MIN_DISTANCE_SQ
+		return TargetScore.new(target, 1.0, dist_sq, 1.0)  # Max score
 	
 	# Distance score: 1.0 at distance 0, 0.0 at max range (closer = better)
 	var dist: float = sqrt(dist_sq)
@@ -64,7 +64,8 @@ static func create_from_target(
 	var distance_score: float = 1.0 - clamp(normalized_dist, 0.0, 1.0)
 	
 	# Angle score: 1.0 when directly in front, 0.0 at cone edge
-	var to_target_normalized: Vector3 = to_target / dist if dist > 0.0 else Vector3.FORWARD
+	# Use actual normalization to ensure unit vector for correct dot product
+	var to_target_normalized: Vector3 = to_target / dist
 	var dot: float = facing_dir.dot(to_target_normalized)
 	
 	# Remap from [cos(cone_angle), 1.0] to [0.0, 1.0]

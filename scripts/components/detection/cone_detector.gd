@@ -119,8 +119,10 @@ var _last_facing_dir: Vector3 = Vector3.FORWARD  # Cached facing direction for p
 
 # Error handling
 var _last_error: DetectionError = null  # Last error that occurred
-# Signal for error communication (RefCounted classes support signals in Godot 4+)
+
+# Signals
 signal error_occurred(error: DetectionError)  # Emitted when a critical error occurs
+signal target_changed(new_target: Node, old_target: Node)  # Emitted when locked target changes
 
 
 ## Creates a new ConeDetector instance
@@ -189,8 +191,9 @@ func _init(
 	enable_raycast_optimization = p_enable_raycast_optimization
 	_update_cached_values()
 	
-	# Initialize target prioritizer
+	# Initialize target prioritizer and relay its signal
 	_prioritizer = TargetPrioritizer.new()
+	_prioritizer.target_changed.connect(_on_prioritizer_target_changed)
 
 
 func _update_cached_values() -> void:
@@ -207,12 +210,13 @@ func _update_cached_values() -> void:
 	_spatial_cell_size_sq = _spatial_cell_size * _spatial_cell_size
 	
 	# Cache cell radius calculation (avoid ceil/division every frame)
+	var max_radius: int = GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS
 	if _spatial_cell_size > 0.0:
 		var cells_to_check: float = ceil(detection_range / _spatial_cell_size)
 		var calculated_radius: int = int((cells_to_check + 1.0) / 2.0)
-		_cached_cell_radius = mini(calculated_radius, GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS)
+		_cached_cell_radius = mini(calculated_radius, max_radius)
 	else:
-		_cached_cell_radius = GameConstants.DETECTION_SPATIAL_MAX_CELL_RADIUS
+		_cached_cell_radius = max_radius
 	
 	# Update cached raycast optimization thresholds (only recalculated when range changes)
 	var close_ratio: float = GameConstants.DETECTION_RAYCAST_OPTIMIZATION_CLOSE_RANGE_RATIO
@@ -590,11 +594,9 @@ func clear_target_lock() -> void:
 	_prioritizer.clear_target_lock()
 
 
-## Returns the target_changed signal from the prioritizer
-## Connect to this for target change notifications:
-##   detector.get_target_changed_signal().connect(_on_target_changed)
-func get_target_changed_signal() -> Signal:
-	return _prioritizer.target_changed
+func _on_prioritizer_target_changed(new_target: Node, old_target: Node) -> void:
+	# Relay signal from prioritizer to external listeners
+	target_changed.emit(new_target, old_target)
 
 
 # ============================================================================

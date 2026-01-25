@@ -17,7 +17,7 @@ var enemy_detector: EnemyDetector
 
 func _ready() -> void:
 	enemy_detector = EnemyDetector.new()
-	enemy_detector.get_target_changed_signal().connect(_on_target_changed)
+	enemy_detector.target_changed.connect(_on_target_changed)
 
 
 func _physics_process(delta: float) -> void:

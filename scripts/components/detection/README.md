@@ -35,7 +35,7 @@ Cone-shaped object detection with target prioritization (Hades-style targeting).
 ```gdscript
 # Setup
 var detector = EnemyDetector.new()
-detector.get_target_changed_signal().connect(_on_target_changed)
+detector.target_changed.connect(_on_target_changed)
 
 # Every frame
 detector.check_facing_object(self, facing_dir)
@@ -75,7 +75,7 @@ func _physics_process(delta: float) -> void:
 
 ```gdscript
 # Emitted when locked target changes
-detector.get_target_changed_signal().connect(_on_target_changed)
+detector.target_changed.connect(_on_target_changed)
 
 func _on_target_changed(new_target: Node, old_target: Node) -> void:
     if new_target:

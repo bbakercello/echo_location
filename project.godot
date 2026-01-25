@@ -11,9 +11,13 @@ config_version=5
 [application]
 
 config/name="LoFi Prototype 1"
-run/main_scene="uid://bvelvwjps85ev"
+run/main_scene="uid://cpo7b171ygn86"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+GameConstants="*res://scripts/game_constants.gd"
 
 [input]
 
@@ -55,7 +59,3 @@ ui_down={
 3d_physics/layer_1="Player"
 3d_physics/layer_2="Enemies"
 3d_physics/layer_3="Environment"
-
-[autoload]
-
-GameConstants="*res://scripts/game_constants.gd"
